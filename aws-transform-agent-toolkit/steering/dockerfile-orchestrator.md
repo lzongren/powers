@@ -20,10 +20,14 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Install AWS Transform SDK from PyPI
+# Install AWS Transform SDK from TestPyPI
 RUN pip install --no-cache-dir \
+    --index-url https://test.pypi.org/simple/ \
+    --extra-index-url https://pypi.org/simple/ \
     agent-builder-sdk-aws-transform \
-    agent-builder-agentic-mcp-aws-transform
+    agent-builder-agentic-mcp-aws-transform \
+    agent-builder-types-aws-transform \
+    agent-builder-mcp-client-aws-transform
 
 # Register botocore service models (REQUIRED for Agentic API and Agent Registry API)
 RUN pip install --no-cache-dir awscli && \

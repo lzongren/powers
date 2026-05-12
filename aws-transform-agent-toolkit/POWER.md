@@ -32,19 +32,27 @@ Before using this power, ensure the following are installed and configured:
 
 ### Step 2: Install AWS Transform Agent SDK
 
-Install the SDK from PyPI into a virtual environment:
+Install the SDK from TestPyPI into a virtual environment:
 
 ```bash
 cd <user-project>
 python3 -m venv .venv && source .venv/bin/activate
-pip install agent-builder-sdk-aws-transform agent-builder-agentic-mcp-aws-transform
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ \
+    agent-builder-sdk-aws-transform \
+    agent-builder-agentic-mcp-aws-transform \
+    agent-builder-types-aws-transform \
+    agent-builder-mcp-client-aws-transform
 ```
 
 Windows PowerShell:
 ```powershell
 cd <user-project>
 py -3 -m venv .venv; .venv\Scripts\Activate.ps1
-pip install agent-builder-sdk-aws-transform agent-builder-agentic-mcp-aws-transform
+pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ `
+    agent-builder-sdk-aws-transform `
+    agent-builder-agentic-mcp-aws-transform `
+    agent-builder-types-aws-transform `
+    agent-builder-mcp-client-aws-transform
 ```
 
 **Verify installation:**
