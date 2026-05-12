@@ -16,7 +16,7 @@ Before using this power, ensure the following are installed and configured:
   - Verify with: `python3 --version`
   - **CRITICAL**: Python 3.11 or higher is required. The SDK will not work with earlier versions.
 
-- **AWS CLI**: Required for deploying to AgentCore and accessing AWS Transform registry
+- **AWS CLI**: Required for deploying to Bedrock AgentCore and accessing AWS Transform registry
   - Verify with: `aws --version`
   - **CRITICAL**: Must be configured with credentials that have access to your AWS account.
   - Test access: `aws sts get-caller-identity`
@@ -32,13 +32,12 @@ Before using this power, ensure the following are installed and configured:
 
 ### Step 2: Install AWS Transform Agent SDK
 
-Install the SDK from TestPyPI into a virtual environment:
+Install the SDK from PyPI into a virtual environment:
 
 ```bash
 cd <user-project>
 python3 -m venv .venv && source .venv/bin/activate
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ \
-    agent-builder-sdk-aws-transform \
+pip install agent-builder-sdk-aws-transform \
     agent-builder-agentic-mcp-aws-transform \
     agent-builder-types-aws-transform \
     agent-builder-mcp-client-aws-transform
@@ -48,8 +47,7 @@ Windows PowerShell:
 ```powershell
 cd <user-project>
 py -3 -m venv .venv; .venv\Scripts\Activate.ps1
-pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ `
-    agent-builder-sdk-aws-transform `
+pip install agent-builder-sdk-aws-transform `
     agent-builder-agentic-mcp-aws-transform `
     agent-builder-types-aws-transform `
     agent-builder-mcp-client-aws-transform
@@ -88,7 +86,7 @@ aws configure add-model --service-name transformagenticservice --service-model "
 AWS Transform agent deployment requires two IAM roles in your AWS account:
 
 - **`AgentCoreExecutionRole`** — used by Bedrock AgentCore to run your agent container. Needs Bedrock model access, `transform-agents:*`, ECR pull, CloudWatch Logs, and X-Ray permissions.
-- **`AWSTransformAgentInvokeRole`** — assumed by the AWS Transform compute platform to invoke your AgentCore runtime. Needs `bedrock-agentcore:InvokeAgentRuntime`, `GetAgentRuntime`, and `GetAgentRuntimeEndpoint`.
+- **`AWSTransformAgentInvokeRole`** — assumed by the AWS Transform compute service to invoke your Bedrock AgentCore runtime. Needs `bedrock-agentcore:InvokeAgentRuntime`, `GetAgentRuntime`, and `GetAgentRuntimeEndpoint`.
 
 **Missing or incorrectly configured roles are the single most common cause of silent deployment failures** — the runtime reaches READY but jobs fail ~8 minutes after creation with "Failed to start the job" in the AWS Transform webapp.
 
@@ -122,7 +120,7 @@ aws cloudformation deploy \
 
 **Regional scope:** The AWS Transform Compute principal format is `prod.{region}.compute.elastic-gumby.aws.internal`, and AWS Transform is available in several regions. This power, its CloudFormation template, and the deployment tooling assume us-east-1 only. Using a non us-east-1 AWS Transform region requires swapping the region segment in both principals, pointing the registry endpoint at the matching region, and passing `region` explicitly to `deploy_agent_full_pipeline`.
 
-**If your roles have non-default names** (e.g., set up via the AWS console or AgentCore SDK which creates roles like `AmazonBedrockAgentCoreSDKRuntime-...`):
+**If your roles have non-default names** (e.g., set up via the AWS console or Bedrock AgentCore SDK which creates roles like `AmazonBedrockAgentCoreSDKRuntime-...`):
 
 - `AgentCoreExecutionRole`: the MCP deployment tool first tries the default name, then falls back to scanning trust policies for a role trusting `bedrock-agentcore.amazonaws.com`. If exactly one match is found it's used automatically; if zero or multiple, you'll get an error asking you to pass `execution_role_arn` explicitly.
 - `AWSTransformAgentInvokeRole`: the MCP deployment tool only looks up the exact default name. If your invoke role has a different name, you must pass `access_role_arn` explicitly — otherwise registry registration is skipped with a warning.
@@ -182,7 +180,7 @@ Restart Kiro after making changes.
 Kiro can generate complete deployment pipelines covering:
 - Docker image building (with SDK and MCP runtime)
 - ECR repository setup and image push
-- AgentCore runtime creation with `bedrock-agentcore-control`
+- Bedrock AgentCore runtime creation with `bedrock-agentcore-control`
 - AWS Transform agent registration with correct API parameters
 - IAM role CloudFormation templates
 
@@ -211,7 +209,7 @@ This power includes an MCP server with search and registration tools:
   - Automatically detects best runtime for current platform
   - Pushes image to ECR (creates repository if needed)
 - **deploy_agent_to_agentcore** - Deploy agent image to Bedrock AgentCore
-  - Creates AgentCore runtime and polls until READY
+  - Creates Bedrock AgentCore runtime and polls until READY
   - Generates unique runtime names with timestamp to avoid conflicts
 - **deploy_agent_full_pipeline** - Complete deployment pipeline: build → push → deploy → register
   - Orchestrates all phases for full agent deployment to AWS Transform
@@ -221,7 +219,7 @@ This power includes an MCP server with search and registration tools:
 ### Agent Registry Tools
 - **register_agent** - Register and publish a new agent with AWS Transform Agent Registry
   - Performs all three registration steps: RegisterAgent → PublishAgentVersion → UpdatePublisherAccessControl
-  - Use after deploying your agent to AgentCore to register it with AWS Transform
+  - Use after deploying your agent to Bedrock AgentCore to register it with AWS Transform
 - **get_agent** - Get details of a registered agent
 - **get_agent_version** - Get a specific version of a registered agent
 - **update_agent** - Update an existing agent's metadata
@@ -309,7 +307,7 @@ Example workflow:
 - Building or updating subagents → `steering/subagent-patterns.md`
 - Working with AWS Transform APIs (Agentic API, Registry API) → `steering/api-reference.md`
 - Registering agents, publishing versions, understanding agentCard schema for composability → `steering/agent-registration.md`
-- Deploying agents (Docker, ECR, AgentCore, pipeline automation) → `steering/deployment-pipeline-guide.md`
+- Deploying agents (Docker, ECR, Bedrock AgentCore, pipeline automation) → `steering/deployment-pipeline-guide.md`
 - Working with the skill registry (upload, download, share, manage agent skills) → `steering/skill-operations.md`
   - Skills are reusable capabilities that expand what an agent can do. The skill registry is a central repository where developers can choose from or contribute to a bank of skills to use with their agents.
 - Troubleshooting agent deployment or runtime issues → `steering/troubleshooting.md`
@@ -321,7 +319,7 @@ Example workflow:
 1. Read the architecture overview in `getting-started.md`
 2. Follow the patterns in `orchestrator-patterns.md` or `subagent-patterns.md`
 3. Use the inline code examples to scaffold your agent, then customize
-4. Test locally before deploying to AgentCore
+4. Test locally before deploying to Bedrock AgentCore
 
 ## License
 AWS Service Terms. This power is provided by AWS and is subject to the AWS Customer Agreement and applicable AWS service terms.

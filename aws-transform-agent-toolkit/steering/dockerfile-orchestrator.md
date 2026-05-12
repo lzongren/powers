@@ -4,7 +4,7 @@
 
 1. **Missing botocore service models** — agent init fails with `Unknown service: 'transformagenticservice'`. The SDK registers these models on the host during install, but they must also be registered inside the container.
 
-2. **Missing MCP server shim** — `AgentRuntimeServer` spawns the Platform MCP server from the hardcoded path `/home/amazon/AgentBuilderAgenticMCP/bin/agent-builder-agentic-mcp`. Without the shim, the runtime fails with `FileNotFoundError` and the agent is stuck in STARTING.
+2. **Missing MCP server shim** — `AgentRuntimeServer` spawns the Agentic MCP server from the hardcoded path `/home/amazon/AgentBuilderAgenticMCP/bin/agent-builder-agentic-mcp`. Without the shim, the runtime fails with `FileNotFoundError` and the agent is stuck in STARTING.
 
 Adapt the `COPY src/orchestrator/ .` line and `ENTRYPOINT` to match your source layout. Everything else must remain as-is.
 
@@ -20,10 +20,8 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Install AWS Transform SDK from TestPyPI
+# Install AWS Transform SDK from PyPI
 RUN pip install --no-cache-dir \
-    --index-url https://test.pypi.org/simple/ \
-    --extra-index-url https://pypi.org/simple/ \
     agent-builder-sdk-aws-transform \
     agent-builder-agentic-mcp-aws-transform \
     agent-builder-types-aws-transform \

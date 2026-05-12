@@ -1,12 +1,12 @@
 ---
 inclusion: auto
 name: deployment-pipeline-guide
-description: "Guidance for deploying AWS Transform agents (Docker, ECR, AgentCore, pipeline automation)"
+description: "Guidance for deploying AWS Transform agents (Docker, ECR, Bedrock AgentCore, pipeline automation)"
 ---
 
 # AWS Transform Agent Deployment Pipeline Guide
 
-This guide covers the complete deployment pipeline for AWS Transform agents, including IAM role setup, container builds, AgentCore runtime deployment, and registry integration. This is based on the battle-tested patterns from the AWS Transform modernization workshop demo project.
+This guide covers the complete deployment pipeline for AWS Transform agents, including IAM role setup, container builds, Bedrock AgentCore runtime deployment, and registry integration. This is based on the battle-tested patterns from the AWS Transform modernization workshop demo project.
 
 > **💡 Recommended Approach**: For the easiest deployment experience, use the MCP deployment tools instead of manual scripts. See [Deploy Agent Workflow Guide](deploy-agent-workflow.md) for the recommended workflow that works cross-platform (Windows/macOS/Linux) and handles all phases automatically.
 >
@@ -22,11 +22,11 @@ The AWS Transform agent deployment model requires two IAM roles, each with speci
 - **Used by**: Bedrock AgentCore service (runtime execution environment)
 - **Purpose**: Executes agent containers, accesses ECR images, writes logs, traces
 - **Trust Policy**: Bedrock's `bedrock-agentcore` service principal
-- **When it's used**: During agent runtime execution when AgentCore pulls images and runs containers
+- **When it's used**: During agent runtime execution when Bedrock AgentCore pulls images and runs containers
 
 ### 2. AWSTransformAgentInvokeRole
 - **Used by**: AWS Transform compute service
-- **Purpose**: Invokes AgentCore runtimes on behalf of AWS Transform
+- **Purpose**: Invokes Bedrock AgentCore runtimes on behalf of AWS Transform
 - **Trust Policy**: AWS Transform compute service principal (`prod.us-east-1.compute.elastic-gumby.aws.internal`)
 - **When it's used**: When AWS Transform routes requests to your agent
 
@@ -115,7 +115,7 @@ Resources:
   # -----------------------------------------------------------------------
   # AWSTransformAgentInvokeRole
   # Trust: AWS Transform compute service
-  # Permissions: Invoke AgentCore runtimes
+  # Permissions: Invoke Bedrock AgentCore runtimes
   # -----------------------------------------------------------------------
   AWSTransformAgentInvokeRole:
     Type: AWS::IAM::Role
@@ -154,7 +154,7 @@ Resources:
 
 Outputs:
   AgentCoreExecutionRoleArn:
-    Description: ARN of the AgentCore execution role (pre-existing)
+    Description: ARN of the Bedrock AgentCore execution role (pre-existing)
     Value: !Sub "arn:aws:iam::${AccountId}:role/AgentCoreExecutionRole"
     Export:
       Name: AWSTransform-AgentCoreExecutionRoleArn
@@ -207,7 +207,7 @@ Phase 2: PUSH
   └─ Verify images exist in ECR
 
 Phase 3: DEPLOY
-  ├─ Create AgentCore runtimes with unique names (timestamp with seconds)
+  ├─ Create Bedrock AgentCore runtimes with unique names (timestamp with seconds)
   ├─ Poll status until READY (or ACTIVE in older API versions)
   ├─ Detect terminal failure states (FAILED, STOPPED, DELETE_FAILED)
   └─ Capture runtime ARNs for registration
@@ -255,14 +255,14 @@ runtime_name = (
 )
 ```
 
-**Why**: AgentCore has a runtime name cooldown period. Using timestamp with seconds precision (not just minutes) prevents "runtime name already exists" errors during rapid redeployment cycles.
+**Why**: Bedrock AgentCore has a runtime name cooldown period. Using timestamp with seconds precision (not just minutes) prevents "runtime name already exists" errors during rapid redeployment cycles.
 
 #### 3. Status Polling for READY
 
 ```python
 # Lines 378-422 from deploy_agents.py
 def _poll_runtime_status(runtime_id: str, region: str, name: str) -> str:
-    """Poll AgentCore runtime status until READY (or ACTIVE) or failure. Returns the ARN."""
+    """Poll Bedrock AgentCore runtime status until READY (or ACTIVE) or failure. Returns the ARN."""
     log.info(
         "  Polling runtime status for %s (timeout %ds)...", name, AGENTCORE_POLL_TIMEOUT
     )
@@ -308,7 +308,7 @@ def _poll_runtime_status(runtime_id: str, region: str, name: str) -> str:
         time.sleep(AGENTCORE_POLL_INTERVAL)
 ```
 
-**Why**: AgentCore runtime deployment is asynchronous. The create call returns immediately, but the runtime isn't usable until status reaches READY or ACTIVE. This polling loop with timeout prevents premature registration.
+**Why**: Bedrock AgentCore runtime deployment is asynchronous. The create call returns immediately, but the runtime isn't usable until status reaches READY or ACTIVE. This polling loop with timeout prevents premature registration.
 
 #### 4. Error Handling with stderr Capture
 
@@ -387,7 +387,7 @@ parser.add_argument(
 Phases (in order):
   1. Build   — Docker build each agent image, save as .tar
   2. Push    — Create ECR repos if needed, tag and push images
-  3. Deploy  — Create AgentCore runtimes, poll until READY
+  3. Deploy  — Create Bedrock AgentCore runtimes, poll until READY
   4. Register — Register agents with AWS Transform registry, publish versions
 
 Usage:
@@ -423,7 +423,7 @@ def main():
     if not args.skip_push:
         phase_push(config)
 
-    # Phase 3: Deploy to AgentCore
+    # Phase 3: Deploy to Bedrock AgentCore
     runtime_info = phase_deploy(config)
 
     # Phase 4: Register with AWS Transform
@@ -442,7 +442,7 @@ def main():
 FROM --platform=linux/arm64 public.ecr.aws/docker/library/python:3.11-slim
 ```
 
-**Why**: AgentCore runtimes run on AWS Graviton (ARM64) instances. x86_64 images will fail at runtime with "exec format error".
+**Why**: Bedrock AgentCore runtimes run on AWS Graviton (ARM64) instances. x86_64 images will fail at runtime with "exec format error".
 
 **Why ECR Public (not Docker Hub)**: `public.ecr.aws/docker/library/python` is the AWS-operated public mirror of Docker Hub's official Python image. Same bits, no AWS account required to pull.
 
@@ -489,7 +489,7 @@ botocore.exceptions.UnknownServiceError: Unknown service: 'transformagenticservi
 
 ### MCP Runtime Wrapper
 
-AgentCore expects an MCP server binary at a specific path:
+Bedrock AgentCore expects an MCP server binary at a specific path:
 
 ```dockerfile
 # Create MCP server wrapper binary
@@ -498,7 +498,7 @@ RUN mkdir -p /home/amazon/AgentBuilderAgenticMCP/bin && \
     chmod +x /home/amazon/AgentBuilderAgenticMCP/bin/agent-builder-agentic-mcp
 ```
 
-**Why**: AgentCore runtime looks for `agent-builder-agentic-mcp` binary in this exact path. The wrapper script delegates to the Python module installed from PyPI.
+**Why**: Bedrock AgentCore runtime looks for `agent-builder-agentic-mcp` binary in this exact path. The wrapper script delegates to the Python module installed from PyPI.
 
 ### Complete Dockerfile Templates
 
@@ -521,7 +521,7 @@ finch build \
 
 ---
 
-## Section 5: AgentCore CLI Commands
+## Section 5: Bedrock AgentCore CLI Commands
 
 ### Create Agent Runtime
 
@@ -636,7 +636,7 @@ ConflictException: An error occurred (ConflictException) when calling the Create
 Runtime name 'atx_ws_my_agent' already exists or was recently deleted
 ```
 
-**Root Cause**: AgentCore has a cooldown period for runtime names. Even after deleting a runtime, the name cannot be immediately reused.
+**Root Cause**: Bedrock AgentCore has a cooldown period for runtime names. Even after deleting a runtime, the name cannot be immediately reused.
 
 **Solution**: Append timestamp with **seconds precision** to runtime names:
 
@@ -746,7 +746,7 @@ is not authorized to perform: bedrock:InvokeModel / transform-agents:GetAgentIns
   Resource: "*"
 ```
 
-**Note**: AgentCore needs broad access because:
+**Note**: Bedrock AgentCore needs broad access because:
 - Agents may invoke different Bedrock models dynamically
 - Agents need to call various AWS Transform Agentic API operations (GetAgentInstance, UpdateJobStatus, etc.)
 Using `Resource: "*"` is intentional and recommended.
@@ -760,7 +760,7 @@ Using `Resource: "*"` is intentional and recommended.
 Container exited with code 1: exec /usr/local/bin/python: exec format error
 ```
 
-**Root Cause**: Image was built for x86_64 but AgentCore runtimes run on ARM64 (Graviton) instances.
+**Root Cause**: Image was built for x86_64 but Bedrock AgentCore runtimes run on ARM64 (Graviton) instances.
 
 **Solution**: Always specify `--platform linux/arm64` in Dockerfile FROM directive:
 
@@ -781,7 +781,7 @@ finch build --platform linux/arm64 -f Dockerfile -t my-agent:latest .
 
 ---
 
-### Issue 7: AgentCore Runtime Stuck in CREATING State
+### Issue 7: Bedrock AgentCore Runtime Stuck in CREATING State
 
 **Symptom**: Runtime status stays "CREATING" for >5 minutes, never reaches READY.
 
@@ -790,7 +790,7 @@ finch build --platform linux/arm64 -f Dockerfile -t my-agent:latest .
 2. Container health check failing
 3. Container crashes immediately on startup
 
-**Solution**: Check AgentCore runtime failure reasons:
+**Solution**: Check Bedrock AgentCore runtime failure reasons:
 
 ```bash
 aws bedrock-agentcore-control get-agent-runtime \
@@ -920,7 +920,7 @@ src/
    ============================================================
    PHASE 3: DEPLOY TO AGENTCORE
    ============================================================
-   Creating AgentCore runtime for code-analysis-agent ...
+   Creating Bedrock AgentCore runtime for code-analysis-agent ...
      ✓ Created runtime ID: abc123def456
      Polling runtime status for code-analysis-agent (timeout 120s)...
      [ 10s] code-analysis-agent status: CREATING
@@ -953,7 +953,7 @@ src/
 
 ### Verification Steps
 
-1. **Verify AgentCore runtimes**:
+1. **Verify Bedrock AgentCore runtimes**:
    ```bash
    aws bedrock-agentcore-control list-agent-runtimes --region us-east-1
    ```
@@ -987,14 +987,14 @@ This guide covers the complete AWS Transform agent deployment lifecycle:
 1. **IAM Setup**: Two roles (AgentCoreExecutionRole, AWSTransformAgentInvokeRole) with precise trust policies
 2. **Build Pipeline**: Four-phase automation (Build → Push → Deploy → Register) with error handling
 3. **Docker Best Practices**: ARM64 platform, SDK wheel installation, MCP wrapper creation
-4. **AgentCore Operations**: Create, poll, verify runtimes with proper status checking
+4. **Bedrock AgentCore Operations**: Create, poll, verify runtimes with proper status checking
 5. **Common Issues**: Solutions for Docker auth, runtime cooldown, trust policies, platform mismatches
 
 **Key Takeaways**:
 - Always use `finch` instead of `docker` on macOS/Linux (finch is not available on Windows — use Docker Desktop there)
 - Include seconds in runtime name timestamps
 - Specify `--platform linux/arm64` for all builds
-- Poll AgentCore status until READY/ACTIVE before registration
+- Poll Bedrock AgentCore status until READY/ACTIVE before registration
 - Use `--cli-input-json` or named parameters to avoid silent failures
 - Trust the prod principal in AWSTransformAgentInvokeRole
 
