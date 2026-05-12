@@ -24,11 +24,11 @@ description: "Field-tested troubleshooting guide for common AWS Transform agent 
 | 12 | Bare model ID fails | `ValidationException: Invocation of model ID...` | Use `us.` prefix (cross-region inference profile) |
 | 13 | agent_factory signature | `takes 1 positional argument but 2 were given` | Add `storage_dir=None` param |
 | 14 | publish_agent_version includes compute | Rejected for `customerConfigurationRequired: true` | Use `publish-agent-version` from `agent-builder-mcp-aws-transform` |
-| 15 | Workspace binding stale | New runtime gets zero invocations | Re-register with `customerConfigurationRequired: false` |
+| 15 | Stale registration after redeploy | New runtime gets zero invocations | Publish new version or re-register with `customerConfigurationRequired: false` |
 | 16 | computeConfiguration schema change | Flat `agentRuntimeArn` rejected | Use nested `provisionedComputeConfiguration.agentCoreConfiguration.runtimeArn` |
 | 17 | Expired STS tokens | `get_caller_identity()` fails | Use `TARGET_ACCOUNT_ID` from `.env` |
 | 18 | Symlinked SDK dir | Build fails or SDK missing | `cp -r` not `ln -s` |
-| 19 | Wrong role in workspace binding | Chat never enables, zero invocations | Use `AWSTransformAgentInvokeRole` not `AgentCoreExecutionRole` |
+| 19 | Wrong role in agent registration | Chat never enables, zero invocations | Use `AWSTransformAgentInvokeRole` not `AgentCoreExecutionRole` |
 | 20 | StatelessAgentRuntimeServer timeout | HITL polling killed after 28s | Use `AgentRuntimeServer` with `delayed_timeout=3600` |
 | 21 | Container reuse stale instance | Subagent COMPLETED without doing work | Re-run job (AWS Transform bug) |
 | 22 | HITL description too long | display_report fails | Truncate to < 1024 chars |
@@ -111,10 +111,10 @@ Required by API but not enforced. Use `agentCard: {}`. Forward-looking field for
 **Symptom:** `publish_agent_version` always includes `computeConfiguration`.
 **Fix:** Use `publish_agent_version` MCP tool with appropriate overrides, manually omitting `computeConfiguration`.
 
-### 15. Workspace Binding Stale After Redeploy
+### 15. Stale Registration After Redeploy
 
 **Symptom:** New runtime is READY but gets zero invocations; old runtime still receives traffic.
-**Fix:** Workspace binding doesn't auto-update. Re-register under new name with `customerConfigurationRequired: false` to embed runtime ARN directly.
+**Fix:** Publish a new agent version pointing to the new runtime ARN, or re-register under a new name with `customerConfigurationRequired: false` to embed runtime ARN directly.
 
 ### 16. computeConfiguration Schema Change
 
@@ -131,10 +131,10 @@ Required by API but not enforced. Use `agentCard: {}`. Forward-looking field for
 **Symptom:** Docker/finch build fails — build context doesn't follow symlinks.
 **Fix:** Copy the SDK into the project directory (don't symlink): `pip install agent-builder-sdk-aws-transform --target <your-project>/sdk/`.
 
-### 19. Wrong Role in Workspace Binding
+### 19. Wrong Role in Agent Registration
 
 **Symptom:** Chat input never enables, zero invocations, no error.
-**Cause:** `AgentCoreExecutionRole`'s trust policy doesn't allow the AWS Transform compute service principal.
+**Cause:** Used `AgentCoreExecutionRole` instead of `AWSTransformAgentInvokeRole` in the `atxAccessRoleArn` field during registration.
 **Fix:** Use `AWSTransformAgentInvokeRole` (trusted by `prod.us-east-1.compute.elastic-gumby.aws.internal`).
 
 ### 20. StatelessAgentRuntimeServer 28s Timeout

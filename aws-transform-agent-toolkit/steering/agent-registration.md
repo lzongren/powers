@@ -1,7 +1,7 @@
 ---
 inclusion: auto
 name: agent-registration
-description: "Guidance for registering agents, publishing versions, understanding agentCard schema for composability, and workspace bindings"
+description: "Guidance for registering agents, publishing versions, and understanding agentCard schema for composability"
 ---
 
 # Agent Registration Guide
@@ -58,7 +58,6 @@ client = boto3.client(
 1. **Build & containerize** your agent
 2. **Deploy to Bedrock AgentCore** via `aws bedrock-agentcore-control create-agent-runtime`
 3. **Register, publish, and enable access** — use the `register_agent` MCP tool to perform steps 3–5 in a single call (RegisterAgent → PublishAgentVersion → UpdatePublisherAccessControl)
-4. **Bind to workspace** via AWS Transform console UI (for orchestrators)
 
 > **Tip:** The `register_agent` tool automates the RegisterAgent, PublishAgentVersion, and UpdatePublisherAccessControl API calls. For manual CLI registration, see the detailed API sections below.
 
@@ -178,12 +177,12 @@ The `--metadata` parameter is a JSON object with the following fields:
 
 | `customerConfigurationRequired` | `computeConfiguration` in publish | `customerConfiguredAgentDependencies` via update |
 |---|---|---|
-| `true` | Blocked — customer provides compute at bind time | Allowed — declare subagent dependencies |
+| `true` | Blocked — customer provides compute at deployment time | Allowed — declare subagent dependencies |
 | `false` | Allowed — embed runtime ARN in published version | Blocked — no dependency declaration |
 
 An orchestrator needing webapp visibility + compute config + subagent dependencies cannot satisfy all three. Choose based on priority:
 - Register with `false` — webapp + compute config, but no declared dependencies (orchestrator still invokes subagents at runtime)
-- Register with `true` — dependencies declared, but compute config provided by customer at bind time
+- Register with `true` — dependencies declared, but compute config provided by customer at deployment time
 
 ### customerConfiguredAgentDependencies
 
@@ -772,33 +771,7 @@ aws atxagentregistryexternal update-publisher-access-control \
   --region us-east-1
 ```
 
-**CRITICAL:** Even if you're using the same AWS account for both publishing and consuming agents, you MUST run this command to make agents visible in the AWS Transform console and available for workspace binding.
-
-## Workspace Binding (Orchestrators Only)
-
-After registering and publishing an orchestrator agent with `jobOrchestrator: true`, the final step is **binding it to an AWS Transform workspace**.
-
-**CRITICAL: Use AWSTransformAgentInvokeRole, NOT AgentCoreExecutionRole** for workspace bindings.
-
-| Role | Purpose | Trust Policy Principal |
-|------|---------|----------------------|
-| `AgentCoreExecutionRole` | Runtime execution (Bedrock, ECR, CloudWatch) | `bedrock-agentcore.amazonaws.com` |
-| `AWSTransformAgentInvokeRole` | AWS Transform invocation | `prod.us-east-1.compute.elastic-gumby.aws.internal` |
-
-Using `AgentCoreExecutionRole` in workspace bindings causes zero invocations with no error — AWS Transform silently fails to assume the role.
-
-**This step is NOT done via API** — it requires the AWS Transform console UI:
-
-1. Navigate to the AWS Transform console/frontend
-2. Go to your workspace settings
-3. Select the registered orchestrator from the available agents list
-4. Bind it to your workspace
-
-**Common Error:** If you see "Cannot start job without orchestrator agent" from `elasticgumbyfrontendservice`, it means:
-- The orchestrator was registered successfully in the registry
-- But it hasn't been bound to the workspace in the AWS Transform console UI
-
-The workspace binding associates a specific orchestrator agent with a workspace, allowing the AWS Transform frontend to route chat/job requests to that orchestrator.
+**CRITICAL:** Even if you're using the same AWS account for both publishing and consuming agents, you MUST run this command to make agents visible in the AWS Transform console.
 
 ## Complete Registration Workflow
 
@@ -895,8 +868,6 @@ aws atxagentregistryexternal register-agent \
   --region us-east-1
 
 # ... continue with publish-agent-version and update-publisher-access-control
-
-# 6. Bind to workspace via AWS Transform console UI (manual step)
 ```
 
 ## DeregisterAgent API
@@ -968,13 +939,11 @@ result = deregister_agent(name="code-analysis-agent", force=True)
 | `ValidationException: agentRuntimeName must match [a-zA-Z][a-zA-Z0-9_]{0,47}` | Runtime name contains hyphens or invalid characters | Use underscores instead of hyphens: `my_agent` not `my-agent` |
 | `AccessDeniedException: unable to assume the Access Role` | IAM role trust policy doesn't match registry endpoint | Update trust policy to include correct service principal (`prod.us-east-1.compute.elastic-gumby.aws.internal` for prod) |
 | `ConflictException: Agent already exists` | Agent name already registered | Use `publish-agent-version` to publish a new version instead of `register-agent` |
-| `Cannot start job without orchestrator agent` | Orchestrator not bound to workspace | Bind orchestrator to workspace in AWS Transform console UI |
-| Orchestrator not appearing in workspace list | Missing `jobOrchestrator: true` or access not enabled | Re-register with correct metadata and run `update-publisher-access-control` |
+| `Cannot start job without orchestrator agent` | Orchestrator not registered or access not enabled | Re-register with `jobOrchestrator: true` and run `update-publisher-access-control` |
 | Runtime status stuck in `CREATING` | Container image issues or role permissions | Check CloudWatch logs for the runtime, verify execution role permissions |
 | `Invalid parameter: monitoringType DEFAULT` | Wrong monitoringType value | Use `HEALTHCHECK` or `HEARTBEAT`, not `DEFAULT` |
 | `Agent marked as customer configurable, compute configuration cannot be provided` | `customerConfigurationRequired: true` with `computeConfiguration` in publish | Omit `computeConfiguration`; use `publish-agent-version` from `agent-builder-mcp-aws-transform` |
-| Chat input never enables / zero invocations | Wrong role in workspace binding | Use `AWSTransformAgentInvokeRole`, not `AgentCoreExecutionRole` |
-| `ConflictException` on workspace binding update | Version already bound | Publish a new version and re-bind, or re-register under a new name with `customerConfigurationRequired: false` |
+| Chat input never enables / zero invocations | Wrong role used in registration | Use `AWSTransformAgentInvokeRole`, not `AgentCoreExecutionRole` |
 
 ## Verification Commands
 

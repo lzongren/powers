@@ -78,7 +78,7 @@ Ask the user these questions in order:
 
 3. **Agent version**: "What version?" (default: `1.0.0`)
 
-4. **IMPORTANT - Agent type**: "Will users bind this agent to workspaces in the AWS Transform console?"
+4. **IMPORTANT - Agent type**: "Will this agent be the main orchestrator that users interact with in the AWS Transform console?"
    - If user says **YES** → This is a job orchestrator (set `job_orchestrator=True`)
    - If user says **NO** → This is a subagent (set `job_orchestrator=False`)
 
@@ -95,7 +95,7 @@ deploy_agent_full_pipeline(
     agent_path="<path from Step 1>",
     agent_name="<name from Step 1>",
     agent_version="<version from Step 1>",
-    job_orchestrator=<True if user answered YES to workspace binding, False otherwise>,
+    job_orchestrator=<True if user answered YES to orchestrator question, False otherwise>,
     chat_ui_label="<display name if job_orchestrator=True>",  # Optional
     use_codebuild=<True if Windows or CI/CD, False to auto-detect>
 )

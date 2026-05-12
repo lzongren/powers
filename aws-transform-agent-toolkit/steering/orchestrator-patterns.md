@@ -259,7 +259,7 @@ A minimal Dockerfile will fail on first invocation with two separate bugs that a
 1. **Missing botocore service models** → `Unknown service: 'transformagenticservice'` at agent init. Job stuck in STARTING.
 2. **Missing MCP server shim** → `FileNotFoundError: '/home/amazon/AgentBuilderAgenticMCP/bin/agent-builder-agentic-mcp'`. Job stuck in STARTING.
 
-Both require a full rebuild → new runtime → new version → re-bind cycle to fix. The template already handles both correctly.
+Both require a full rebuild → new runtime → new version → re-register cycle to fix. The template already handles both correctly.
 
 ## Architecture Decisions (must-know)
 
