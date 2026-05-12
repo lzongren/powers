@@ -223,7 +223,7 @@ build_agent_image(
 **Deploy only (after building manually):**
 ```python
 deploy_agent_to_agentcore(
-    image_uri="123456.dkr.ecr.us-east-1.amazonaws.com/atx-workshop/agent:latest",
+    image_uri="123456.dkr.ecr.us-east-1.amazonaws.com/aws-transform-agents/agent:latest",
     agent_name="modernization-orchestrator",
     execution_role_arn="arn:aws:iam::123456:role/AgentCoreExecutionRole"
 )

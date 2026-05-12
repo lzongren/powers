@@ -16,7 +16,7 @@ This guide covers the complete deployment pipeline for AWS Transform agents, inc
 
 ## Section 1: IAM Roles Overview
 
-The AWS Transform agent deployment model requires three distinct IAM roles, each with specific trust relationships and permissions:
+The AWS Transform agent deployment model requires two IAM roles, each with specific trust relationships and permissions:
 
 ### 1. AgentCoreExecutionRole
 - **Used by**: Bedrock AgentCore service (runtime execution environment)
@@ -29,12 +29,6 @@ The AWS Transform agent deployment model requires three distinct IAM roles, each
 - **Purpose**: Invokes AgentCore runtimes on behalf of AWS Transform
 - **Trust Policy**: AWS Transform compute service principal (`prod.us-east-1.compute.elastic-gumby.aws.internal`)
 - **When it's used**: When AWS Transform routes requests to your agent
-
-### 3. ATXOnboardingScriptAccessRole
-- **Used by**: Deployment scripts and CI/CD pipelines
-- **Purpose**: Creates ECR repos, deploys AgentCore runtimes, registers agents
-- **Trust Policy**: AWS account root (for CLI/script usage)
-- **When it's used**: During deployment automation (build, push, deploy, register phases)
 
 ---
 
@@ -52,7 +46,6 @@ Description: >
   IAM roles required for AWS Transform modernization agent deployment.
   - AgentCoreExecutionRole: Used by Bedrock AgentCore to run agent containers
   - AWSTransformAgentInvokeRole: Used by AWS Transform to invoke agents
-  - ATXOnboardingScriptAccessRole: Used by onboarding scripts for initial setup
 
 Parameters:
   AccountId:
@@ -158,76 +151,19 @@ Resources:
                   - "transform-agents:*"
                 Resource: "*"
 
-  # -----------------------------------------------------------------------
-  # ATXOnboardingScriptAccessRole
-  # Trust: Account root (for CLI/script usage during onboarding)
-  # Permissions: ECR, AgentCore, AWS Transform registry operations
-  # -----------------------------------------------------------------------
-  ATXOnboardingScriptAccessRole:
-    Type: AWS::IAM::Role
-    Properties:
-      RoleName: ATXOnboardingScriptAccessRole
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !Sub "arn:aws:iam::${AccountId}:root"
-            Action: sts:AssumeRole
-      Policies:
-        - PolicyName: ATXOnboardingPolicy
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Sid: ECRManagement
-                Effect: Allow
-                Action:
-                  - ecr:CreateRepository
-                  - ecr:DescribeRepositories
-                  - ecr:ListImages
-                  - ecr:GetAuthorizationToken
-                  - ecr:BatchCheckLayerAvailability
-                  - ecr:GetDownloadUrlForLayer
-                  - ecr:BatchGetImage
-                  - ecr:PutImage
-                  - ecr:InitiateLayerUpload
-                  - ecr:UploadLayerPart
-                  - ecr:CompleteLayerUpload
-                Resource: "*"
-              - Sid: AgentCoreManagement
-                Effect: Allow
-                Action:
-                  - bedrock-agentcore:CreateAgentRuntime
-                  - bedrock-agentcore:UpdateAgentRuntime
-                  - bedrock-agentcore:GetAgentRuntime
-                  - bedrock-agentcore:ListAgentRuntimes
-                Resource: "*"
-              - Sid: IAMPassRole
-                Effect: Allow
-                Action:
-                  - iam:PassRole
-                Resource:
-                  - !Sub "arn:aws:iam::${AccountId}:role/AgentCoreExecutionRole"
-                  - !GetAtt AWSTransformAgentInvokeRole.Arn
 
 Outputs:
   AgentCoreExecutionRoleArn:
     Description: ARN of the AgentCore execution role (pre-existing)
     Value: !Sub "arn:aws:iam::${AccountId}:role/AgentCoreExecutionRole"
     Export:
-      Name: ATXWorkshop-AgentCoreExecutionRoleArn
+      Name: AWSTransform-AgentCoreExecutionRoleArn
 
   AWSTransformAgentInvokeRoleArn:
     Description: ARN of the AWS Transform agent invoke role
     Value: !GetAtt AWSTransformAgentInvokeRole.Arn
     Export:
-      Name: ATXWorkshop-AWSTransformAgentInvokeRoleArn
-
-  ATXOnboardingScriptAccessRoleArn:
-    Description: ARN of the onboarding script access role
-    Value: !GetAtt ATXOnboardingScriptAccessRole.Arn
-    Export:
-      Name: ATXWorkshop-ATXOnboardingScriptAccessRoleArn
+      Name: AWSTransform-AWSTransformAgentInvokeRoleArn
 ```
 
 ### Deploying the CloudFormation Stack
@@ -594,7 +530,7 @@ aws bedrock-agentcore-control create-agent-runtime \
   --agent-runtime-name atx_ws_my_agent_02251430 \
   --agent-runtime-artifact '{
     "containerConfiguration": {
-      "containerUri": "111122223333.dkr.ecr.us-east-1.amazonaws.com/atx-workshop/my-agent:latest"
+      "containerUri": "111122223333.dkr.ecr.us-east-1.amazonaws.com/aws-transform-agents/my-agent:latest"
     }
   }' \
   --role-arn arn:aws:iam::111122223333:role/AgentCoreExecutionRole \
@@ -629,7 +565,7 @@ aws bedrock-agentcore-control get-agent-runtime \
   "agentRuntimeArn": "arn:aws:bedrock-agentcore:us-east-1:111122223333:agent-runtime/abc123def456",
   "status": "READY",
   "containerConfiguration": {
-    "containerUri": "111122223333.dkr.ecr.us-east-1.amazonaws.com/atx-workshop/my-agent:latest"
+    "containerUri": "111122223333.dkr.ecr.us-east-1.amazonaws.com/aws-transform-agents/my-agent:latest"
   },
   "roleArn": "arn:aws:iam::111122223333:role/AgentCoreExecutionRole",
   "networkConfiguration": {
@@ -655,7 +591,7 @@ aws bedrock-agentcore-control update-agent-runtime \
   --agent-runtime-id abc123def456 \
   --agent-runtime-artifact '{
     "containerConfiguration": {
-      "containerUri": "111122223333.dkr.ecr.us-east-1.amazonaws.com/atx-workshop/my-agent:v2"
+      "containerUri": "111122223333.dkr.ecr.us-east-1.amazonaws.com/aws-transform-agents/my-agent:v2"
     }
   }' \
   --region us-east-1
@@ -977,9 +913,9 @@ src/
    ============================================================
    Logging in to ECR...
      ✓ ECR login successful
-   Ensuring ECR repo atx-workshop/code-analysis-agent exists...
-     ✓ Created atx-workshop/code-analysis-agent
-     ✓ Image atx-workshop/code-analysis-agent:latest verified in ECR
+   Ensuring ECR repo aws-transform-agents/code-analysis-agent exists...
+     ✓ Created aws-transform-agents/code-analysis-agent
+     ✓ Image aws-transform-agents/code-analysis-agent:latest verified in ECR
 
    ============================================================
    PHASE 3: DEPLOY TO AGENTCORE
@@ -1048,7 +984,7 @@ src/
 
 This guide covers the complete AWS Transform agent deployment lifecycle:
 
-1. **IAM Setup**: Three roles (AgentCoreExecutionRole, AWSTransformAgentInvokeRole, ATXOnboardingScriptAccessRole) with precise trust policies
+1. **IAM Setup**: Two roles (AgentCoreExecutionRole, AWSTransformAgentInvokeRole) with precise trust policies
 2. **Build Pipeline**: Four-phase automation (Build → Push → Deploy → Register) with error handling
 3. **Docker Best Practices**: ARM64 platform, SDK wheel installation, MCP wrapper creation
 4. **AgentCore Operations**: Create, poll, verify runtimes with proper status checking
