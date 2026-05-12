@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "aws-transform-agent-toolkit": {
+      "command": "uvx",
+      "args": ["--python", "3.13", "--index-url", "https://test.pypi.org/simple/", "--extra-index-url", "https://pypi.org/simple/", "--index-strategy", "unsafe-best-match", "--from", "agent-builder-mcp-aws-transform>=1.0", "agent-builder-mcp"]
+    }
+  }
+}
