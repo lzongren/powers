@@ -12,7 +12,7 @@ The AWS Transform Agentic API provides operations for agents to interact with AW
 
 **Base Endpoint**: Configured via `QT_AGENTIC_API_ENDPOINT` environment variable
 
-**Authentication**: AWS SigV4 signing with `eg-agenticapi` signing name
+**Authentication**: AWS SigV4 signing with `transform-agents` signing name
 
 **Protocol**: JSON 1.0
 

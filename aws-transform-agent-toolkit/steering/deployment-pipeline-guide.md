@@ -92,12 +92,7 @@ Resources:
   #                 - bedrock-runtime:Converse
   #                 - bedrock-runtime:InvokeModel
   #               Resource: "*"
-  #             - Sid: InternalAgenticApiPolicy
-  #               Effect: Allow
-  #               Action:
-  #                 - eg-agenticapi:*
-  #               Resource: "*"
-  #             - Sid: ExternalAgenticApiPolicy
+  #             - Sid: TransformAgentsApiPolicy
   #               Effect: Allow
   #               Action:
   #                 - transform-agents:*
@@ -157,10 +152,10 @@ Resources:
                   - bedrock-agentcore:ListAgentRuntimes
                   - bedrock-agentcore:StopRuntimeSession
                 Resource: "*"
-              - Sid: ATXAgenticAPI
+              - Sid: TransformAgentsAPI
                 Effect: Allow
                 Action:
-                  - "eg-agenticapi:*"
+                  - "transform-agents:*"
                 Resource: "*"
 
   # -----------------------------------------------------------------------
@@ -792,7 +787,7 @@ aws iam get-role --role-name AWSTransformAgentInvokeRole --query 'Role.AssumeRol
 **Symptom**:
 ```
 AccessDeniedException: User: arn:aws:sts::111122223333:assumed-role/AgentCoreExecutionRole/...
-is not authorized to perform: bedrock:InvokeModel / eg-agenticapi:GetAgentInstance
+is not authorized to perform: bedrock:InvokeModel / transform-agents:GetAgentInstance
 ```
 
 **Root Cause**: AgentCoreExecutionRole missing Bedrock and AWS Transform Agentic API permissions.
@@ -808,12 +803,7 @@ is not authorized to perform: bedrock:InvokeModel / eg-agenticapi:GetAgentInstan
     - bedrock-runtime:Converse
     - bedrock-runtime:InvokeModel
   Resource: "*"
-- Sid: InternalAgenticApiPolicy
-  Effect: Allow
-  Action:
-    - eg-agenticapi:*
-  Resource: "*"
-- Sid: ExternalAgenticApiPolicy
+- Sid: TransformAgentsApiPolicy
   Effect: Allow
   Action:
     - transform-agents:*
@@ -823,7 +813,6 @@ is not authorized to perform: bedrock:InvokeModel / eg-agenticapi:GetAgentInstan
 **Note**: AgentCore needs broad access because:
 - Agents may invoke different Bedrock models dynamically
 - Agents need to call various AWS Transform Agentic API operations (GetAgentInstance, UpdateJobStatus, etc.)
-- Both internal (`eg-agenticapi`) and external (`transform-agents`) API namespaces are required
 Using `Resource: "*"` is intentional and recommended.
 
 ---

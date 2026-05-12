@@ -22,7 +22,7 @@ Invoke this workflow when the user wants to:
 
 AWS Transform agent deployment requires two IAM roles:
 
-- **`AgentCoreExecutionRole`** — runs your agent container. Needs `bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream`, `eg-agenticapi:*`, ECR pull, CloudWatch Logs, and X-Ray permissions. Trust principal: `bedrock-agentcore.amazonaws.com`.
+- **`AgentCoreExecutionRole`** — runs your agent container. Needs `bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream`, `transform-agents:*`, ECR pull, CloudWatch Logs, and X-Ray permissions. Trust principal: `bedrock-agentcore.amazonaws.com`.
 - **`AWSTransformAgentInvokeRole`** — assumed by AWS Transform to invoke your runtime. Needs `bedrock-agentcore:InvokeAgentRuntime`, `bedrock-agentcore:GetAgentRuntime`, and `bedrock-agentcore:GetAgentRuntimeEndpoint`. Trust principal: `prod.us-east-1.compute.elastic-gumby.aws.internal`.
 
 > **Regional scope:** The AWS Transform Compute principal format is `{stage}.{region}.compute.elastic-gumby.aws.internal`, and AWS Transform runs in several prod regions. This workflow, the CloudFormation template, and `deploy_agent_full_pipeline` assume us-east-1 only. For a non-us-east-1 AWS Transform region, swap the region segment in both principals, point the registry endpoint at the matching airport code, and pass `region` explicitly to the pipeline tool.

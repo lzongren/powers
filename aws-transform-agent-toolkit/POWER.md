@@ -87,7 +87,7 @@ aws configure add-model --service-name transformagenticservice --service-model "
 
 AWS Transform agent deployment requires two IAM roles in your AWS account:
 
-- **`AgentCoreExecutionRole`** — used by Bedrock AgentCore to run your agent container. Needs Bedrock model access, `eg-agenticapi:*`, ECR pull, CloudWatch Logs, and X-Ray permissions.
+- **`AgentCoreExecutionRole`** — used by Bedrock AgentCore to run your agent container. Needs Bedrock model access, `transform-agents:*`, ECR pull, CloudWatch Logs, and X-Ray permissions.
 - **`AWSTransformAgentInvokeRole`** — assumed by the AWS Transform compute platform to invoke your AgentCore runtime. Needs `bedrock-agentcore:InvokeAgentRuntime`, `GetAgentRuntime`, and `GetAgentRuntimeEndpoint`.
 
 **Missing or incorrectly configured roles are the single most common cause of silent deployment failures** — the runtime reaches READY but jobs fail ~8 minutes after creation with "Failed to start the job" in the AWS Transform webapp.
@@ -145,7 +145,7 @@ Add a hook to validate deployment prerequisites before deploying agents:
   },
   "then": {
     "type": "askAgent",
-    "prompt": "Before deploying AWS Transform agents, verify: 1) AWS credentials are valid (aws sts get-caller-identity), 2) finch or docker is running, 3) IAM roles exist and have correct permissions (AgentCoreExecutionRole with bedrock:InvokeModel and eg-agenticapi:*, AWSTransformAgentInvokeRole with bedrock-agentcore:InvokeAgentRuntime). Report any missing prerequisites."
+    "prompt": "Before deploying AWS Transform agents, verify: 1) AWS credentials are valid (aws sts get-caller-identity), 2) finch or docker is running, 3) IAM roles exist and have correct permissions (AgentCoreExecutionRole with bedrock:InvokeModel and transform-agents:*; AWSTransformAgentInvokeRole with bedrock-agentcore:InvokeAgentRuntime). Report any missing prerequisites."
   }
 }
 ```

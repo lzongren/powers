@@ -124,6 +124,7 @@ The AWS Transform Agent Invoke Role (role assumed by AWS Transform to invoke you
 The `AgentCoreExecutionRole` needs these key permissions:
 - **Bedrock**: `bedrock:InvokeModel`, `bedrock:InvokeModelWithResponseStream` on `arn:aws:bedrock:*::foundation-model/*`
 - **Bedrock AgentCore**: `bedrock-agentcore:GetWorkloadAccessToken*`
+- **AWS Transform Agentic API**: `transform-agents:*` — required for the agent to call GetAgentInstance, UpdateJobStatus, SendMessage, etc.
 - **ECR**: Image pull permissions (ecr:GetAuthorizationToken, ecr:BatchCheckLayerAvailability, ecr:GetDownloadUrlForLayer, ecr:BatchGetImage)
 - **CloudWatch Logs**: CreateLogGroup, CreateLogStream, PutLogEvents
 - **X-Ray**: PutTraceSegments, PutTelemetryRecords
