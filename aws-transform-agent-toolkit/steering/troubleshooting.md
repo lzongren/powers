@@ -17,7 +17,7 @@ description: "Field-tested troubleshooting guide for common AWS Transform agent 
 | 5 | Workspace MCP overrides power | Power servers disabled | Only use `~/.kiro/settings/mcp.json` for power servers |
 | 6 | Python version mismatch | SDK install fails | Use `/opt/homebrew/bin/python3.11 -m venv .venv` |
 | 7 | Publish config gaps | Agent missing resiliency/schemas | Include all required fields (see agent-registration.md) |
-| 8 | agentCard field | A2A Agent Card — required but not enforced | Use `agentCard: {}` (empty object works) |
+| 8 | agentCard field | A2A Agent Card — required by PublishAgentVersion | Empty `{}` rejected by boto3 — see Minimal agentCard Example in agent-registration.md |
 | 9 | Large publish payload | "tool does not exist" error | Publish minimal config first, add fields in later versions |
 | 10 | Orchestrator not in webapp | Agent registered but not visible | Set `jobOrchestrator: true` + `jobOrchestratorMetadata` at registration |
 | 11 | customerConfigurationRequired trade-off | Can't have compute config + dependencies | Choose based on priority (see details) |
@@ -80,7 +80,7 @@ description: "Field-tested troubleshooting guide for common AWS Transform agent 
 
 ### 8. agentCard Field
 
-Required by API but not enforced. Use `agentCard: {}`. Forward-looking field for A2A agent discovery.
+Forward-looking field for A2A agent discovery. Required by `PublishAgentVersion` — boto3 client-side validation rejects empty `{}`. Must contain at least the required fields (id, name, description, version, capabilities with extensions). See the Minimal agentCard Example in `agent-registration.md`.
 
 ### 9. Large Publish Payload Fails
 

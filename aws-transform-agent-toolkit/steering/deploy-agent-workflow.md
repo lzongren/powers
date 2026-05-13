@@ -75,6 +75,7 @@ Ask the user these questions in order:
 1. **Agent directory path**: "Where is the agent code?" (e.g., `eswar-test` or `./agents/modernization`)
 
 2. **Agent name**: "What should this agent be called?" (e.g., `eswar-test` or `modernization-orchestrator`)
+   - **CRITICAL:** `agent_name` is used as an ECR repository name. Must be lowercase and match `[a-z0-9]+((\.|_|__|-+)[a-z0-9]+)*`. No uppercase letters — `myOrchestrator` will fail with `InvalidParameterException` on `DescribeRepositories`.
 
 3. **Agent version**: "What version?" (default: `1.0.0`)
 
