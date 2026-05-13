@@ -330,8 +330,8 @@ The `--configuration` parameter is a JSON object with nested structures. **All f
 | `shortDescription` | string | Yes | Brief description (can be same as registration description) |
 | `computeConfiguration` | object | Yes | Bedrock AgentCore runtime configuration (see below) |
 | `agentCard` | object | Yes | Agent metadata card (see [agentCard Structure](#agentcard-structure) below) |
-| `inputPayloadSchema` | object | Yes | JSON schema for input (can be `{}` for minimal setup) |
-| `outputPayloadSchema` | object | Yes | JSON schema for output (can be `{}` for minimal setup) |
+| `inputPayloadSchema` | object | Yes | JSON schema for input (use `{"type": "object"}` minimal — empty `{}` is rejected) |
+| `outputPayloadSchema` | object | Yes | JSON schema for output (use `{"type": "object"}` minimal — empty `{}` is rejected) |
 | `monitoringType` | string | Yes | Must be `HEALTHCHECK` or `HEARTBEAT` |
 | `notificationsEnabled` | string | Yes | `ENABLED` or `DISABLED` |
 | `objectiveNegotiationPrompt` | string | Yes | Prompt for objective validation (can be empty string) |
@@ -375,7 +375,7 @@ The `--configuration` parameter is a JSON object with nested structures. **All f
 
 #### agentCard Structure
 
-The `agentCard` field describes the agent's identity, capabilities, skills, and provider metadata. For minimal/quick setup you can pass `{}`, but for production registration you should populate the full structure. The registry validates agentCard when non-empty.
+The `agentCard` field describes the agent's identity, capabilities, skills, and provider metadata. It is required by `PublishAgentVersion` (not by `RegisterAgent`). An empty `{}` is rejected by boto3 client-side validation — you must provide at least the required fields. The same validation applies to both orchestrator and subagent cards.
 
 ##### Top-Level agentCard Fields
 
@@ -438,6 +438,10 @@ Provider params:
 
 Contact entry types: `email`, `phone`, `slack`, `cti`, `other`
 
+**Contact validation rules:**
+- `type` — Required. Must be non-null, non-blank, and one of the valid types above. Throws `ValidationException` if missing or invalid.
+- `value` — Only validated when `type` is `"cti"` (must contain `category`, `type`, `item`). For other contact types (`email`, `phone`, `slack`, `other`), the validator does not check whether `value` is present.
+
 **IMPORTANT:** When `ownerType` is `INTERNAL_AGENT`, at least one contact with `type: "cti"` is required.
 
 **2. Agent Dependencies** — Runtime dependencies
@@ -481,6 +485,65 @@ Connector entry fields:
 | `required` | boolean | Yes | Whether the connector is required |
 | `description` | string | Yes | Connector description |
 
+
+##### Minimal agentCard Example
+
+The minimum structure that passes boto3 and server-side validation (works for both orchestrators and subagents):
+
+```json
+{
+  "agentCard": {
+    "id": "my-orchestrator-agent",
+    "name": "My Orchestrator Agent",
+    "description": "Orchestrates sub-agents to complete tasks",
+    "version": "1.0.0",
+    "capabilities": {
+      "restartable": true,
+      "a2aSupported": true,
+      "legacyDashboard": false,
+      "legacyTaskLink": false,
+      "webAppV2": true,
+      "legacyRestartable": false,
+      "extensions": [
+        {
+          "name": "Agent Provider",
+          "description": "Agent publisher details",
+          "params": {
+            "name": "MyTeam",
+            "accountId": "123456789012",
+            "ownerType": "INTERNAL_AGENT",
+            "contactInfo": [
+              {
+                "type": "cti",
+                "value": {
+                  "category": "AWS",
+                  "type": "ATX",
+                  "item": "MyTeam"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "name": "Agent Dependencies",
+          "description": "Agent runtime dependencies",
+          "params": {
+            "agentDependencies": [],
+            "requiredConnectorTypes": []
+          }
+        },
+        {
+          "name": "Agent Connectors",
+          "description": "Connector types used by this agent",
+          "params": {
+            "connectors": []
+          }
+        }
+      ]
+    }
+  }
+}
+```
 
 ##### Complete agentCard Example
 
@@ -628,11 +691,11 @@ Key differences from the minimal subagent card:
 
 #### JSON Schema Examples
 
-For minimal setup, use empty objects:
+For minimal setup, use a basic type declaration (empty `{}` is rejected by boto3):
 ```json
 {
-  "inputPayloadSchema": {},
-  "outputPayloadSchema": {}
+  "inputPayloadSchema": {"type": "object"},
+  "outputPayloadSchema": {"type": "object"}
 }
 ```
 
