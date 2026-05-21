@@ -32,36 +32,42 @@ Before using this power, ensure the following are installed and configured:
 
 ### Step 2: Install AWS Transform Agent SDK
 
-Install the SDK from PyPI into a virtual environment:
+Install the SDK from PyPI into a virtual environment. The `--upgrade` flag plus the `>=1.0.0` floor ensures users on an older release are pulled forward to the latest stable and never land on the v0.0.1 name-reservation placeholder.
 
+macOS/Linux:
 ```bash
 cd <user-project>
 python3 -m venv .venv && source .venv/bin/activate
-pip install agent-builder-sdk-aws-transform \
-    agent-builder-agentic-mcp-aws-transform \
-    agent-builder-types-aws-transform \
-    agent-builder-mcp-client-aws-transform
+pip install --upgrade \
+    'agent-builder-sdk-aws-transform>=1.0.0' \
+    'agent-builder-agentic-mcp-aws-transform>=1.0.0' \
+    'agent-builder-types-aws-transform>=1.0.0' \
+    'agent-builder-mcp-client-aws-transform>=1.0.0'
 ```
 
 Windows PowerShell:
 ```powershell
 cd <user-project>
 py -3 -m venv .venv; .venv\Scripts\Activate.ps1
-pip install agent-builder-sdk-aws-transform `
-    agent-builder-agentic-mcp-aws-transform `
-    agent-builder-types-aws-transform `
-    agent-builder-mcp-client-aws-transform
+pip install --upgrade `
+    'agent-builder-sdk-aws-transform>=1.0.0' `
+    'agent-builder-agentic-mcp-aws-transform>=1.0.0' `
+    'agent-builder-types-aws-transform>=1.0.0' `
+    'agent-builder-mcp-client-aws-transform>=1.0.0'
 ```
 
-**Verify installation:**
+**Verify installation and version:**
 
 ```bash
 python3 -c "import agent_builder_sdk; print('SDK OK')"
+python3 -c "from importlib.metadata import version; print('SDK version:', version('agent-builder-sdk-aws-transform'))"
 ```
+
+The printed version must be `1.0.0` or higher. If you see `0.0.1`, re-run the install command above — that release is a placeholder and ships without the botocore models.
 
 **Register botocore service models:**
 
-The SDK ships with custom botocore service models that must be registered before use:
+The SDK ships with custom botocore service models that must be registered before use. `aws configure add-model` writes the JSONs to `~/.aws/models/`, which boto3 reads regardless of which virtualenv (or `uvx` environment) the client runs in — host registration is sufficient for the MCP server too.
 
 macOS/Linux:
 ```bash
@@ -79,7 +85,15 @@ aws configure add-model --service-name atxagentregistryexternal --service-model 
 aws configure add-model --service-name transformagenticservice --service-model "file://$SDK_MODELS\transformagenticservice\2018-05-10\service-2.json"
 ```
 
-**CRITICAL**: Without these models, the SDK will fail at runtime with `Unknown service: 'transformagenticservice'`.
+**Confirm both models are resolvable by boto3:**
+
+```bash
+python3 -c "import boto3; boto3.client('transformagenticservice', region_name='us-east-1'); boto3.client('atxagentregistryexternal', region_name='us-east-1'); print('Models OK')"
+```
+
+This forces boto3 to load each service model. If the JSONs aren't in `~/.aws/models/` or the SDK install was the placeholder, this raises `UnknownServiceError` immediately — surface it now rather than discover it during a real registration call.
+
+**CRITICAL**: Without these models, the SDK will fail at runtime with `Unknown service: 'transformagenticservice'`. See `steering/troubleshooting.md` for recovery steps if either verification command fails.
 
 ### Step 3: Set up IAM roles
 
@@ -156,7 +170,7 @@ The MCP server is installed via `uvx` (see `mcp.json`). To pass environment vari
   "mcpServers": {
     "aws-transform-agent-toolkit": {
       "command": "uvx",
-      "args": ["agent-builder-mcp-aws-transform"],
+      "args": ["--from", "agent-builder-mcp-aws-transform>=1.0.0", "agent-builder-mcp"],
       "env": {
         "AWS_PROFILE": "my-profile",
         "AWS_REGION": "us-east-1"
@@ -169,6 +183,16 @@ The MCP server is installed via `uvx` (see `mcp.json`). To pass environment vari
 **Environment variables:**
 - `AWS_PROFILE`: AWS CLI profile to use for credentials (set via `aws configure` or `aws sso login`)
 - `AWS_REGION`: AWS region for the AWS Transform (defaults to us-east-1)
+
+The `>=1.0.0` floor on the package spec prevents `uvx` from resolving to the v0.0.1 placeholder. Because the spec changed, `uvx` will re-resolve on next launch — for most users a Kiro restart is enough.
+
+If a previous resolution is still cached and you suspect the MCP server is stuck on an old version, evict it and restart Kiro:
+
+```bash
+uv cache clean --force agent-builder-mcp-aws-transform
+```
+
+Then quit and relaunch Kiro. `--force` removes cache files while Kiro's MCP server may still reference them; the in-memory server keeps working but may fail on a lazy load, which the relaunch resolves. If you'd prefer not to use `--force`, quit Kiro first, then run `uv cache clean agent-builder-mcp-aws-transform` (without `--force`).
 
 Restart Kiro after making changes.
 

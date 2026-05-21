@@ -39,6 +39,7 @@ description: "Field-tested troubleshooting guide for common AWS Transform agent 
 | 27 | ATX_CHAT messaging undocumented | Chat messages don't appear | Use A2A format with `extensions` + `userSelection: "jobCreator"` (see orchestrator-patterns.md) |
 | 28 | Background execution undocumented | Orchestrator exceeds delayed_timeout | Spawn daemon thread from LLM tool |
 | 29 | S3 connector auth denied | `Partner not authorized to access this type of connector` | Fall back to direct S3 tools; request connector access from AWS Transform team |
+| 30 | Stale SDK install or `uvx` cache | `Models OK` check raises `UnknownServiceError`, MCP server reports placeholder v0.0.1, or `pip` reports `Package(s) not found` | Re-run upgrade install + `aws configure add-model`; for the MCP server, bust the `uvx` cache once |
 
 ## Detailed Issues
 
@@ -191,6 +192,37 @@ Forward-looking field for A2A agent discovery. Required by `PublishAgentVersion`
 **Symptom:** `ValidationException: Partner 'X' is not authorized to access this type of connector`.
 **Cause:** Publisher not authorized for S3 connector type at AWS Transform level. `list_s3_connectors()` succeeds but data plane calls fail.
 **Fix:** Fall back to direct S3 tools (`download_s3_file`/`upload_s3_file`). Contact AWS Transform team to request S3 connector authorization. Always register both connector and direct S3 tools.
+
+### 30. Stale SDK Install or `uvx` Cache
+
+**Symptom:** Any of the following:
+- The `Models OK` verification command in onboarding raises `botocore.exceptions.UnknownServiceError: Unknown service: 'transformagenticservice'` (or `'atxagentregistryexternal'`).
+- `python3 -c "from importlib.metadata import version; print(version('agent-builder-sdk-aws-transform'))"` prints `0.0.1`.
+- The MCP server reports the placeholder version, or `pip` reports `Package(s) not found: agent-builder-mcp-aws-transform`.
+
+**Cause:** The pinned floors and `--upgrade` flag in onboarding prevent this on a clean machine. You'll only hit it if the SDK was installed before May 13 (when the v0.0.1 name-reservation placeholder was the only release on PyPI), or if a previous `uvx` invocation cached an old resolution.
+
+**Fix:**
+
+1. Re-run the upgrade install from `POWER.md` Step 2:
+   ```bash
+   pip install --upgrade \
+       'agent-builder-sdk-aws-transform>=1.0.0' \
+       'agent-builder-agentic-mcp-aws-transform>=1.0.0' \
+       'agent-builder-types-aws-transform>=1.0.0' \
+       'agent-builder-mcp-client-aws-transform>=1.0.0'
+   ```
+2. Re-run `aws configure add-model` for both services. The model JSONs only exist in the real release, so registration done against v0.0.1 was a no-op.
+3. Re-run the `Models OK` boto3 sanity check.
+4. For the MCP server, evict the cached resolution and restart Kiro:
+   ```bash
+   uv cache clean --force agent-builder-mcp-aws-transform
+   ```
+   Then quit and relaunch Kiro — the new `mcp.json` args trigger a fresh `uvx` resolution on startup.
+
+   *Optional:* If you'd prefer not to use `--force`, quit Kiro first, then run `uv cache clean agent-builder-mcp-aws-transform` (without `--force`).
+
+**Note:** `uvx` runs the MCP server in its own environment, but boto3 in that environment still reads service models from `~/.aws/models/`. Host-level `aws configure add-model` is sufficient — there is no need to register models inside the `uvx` environment.
 
 ## Debugging Techniques
 
