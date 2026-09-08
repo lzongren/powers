@@ -1042,8 +1042,8 @@ aws atxagentregistryexternal deregister-agent \
 
 For API-specific details, always use the MCP search tools:
 - `keyword_search("register agent")` - General registration guidance
-- `search_by_source("RegisterAgent", "api")` - RegisterAgent API reference
-- `search_by_source("PublishAgentVersion", "api")` - PublishAgentVersion API reference
-- `search_by_source("UpdatePublisherAccessControl", "api")` - Access control API reference
+- `search_by_source("RegisterAgent", "registry-api")` - RegisterAgent API reference
+- `search_by_source("PublishAgentVersion", "registry-api")` - PublishAgentVersion API reference
+- `search_by_source("UpdatePublisherAccessControl", "registry-api")` - Access control API reference
 
 **Grounding requirement:** Only answer based on search results. If specific information isn't found, refer users to the AWS Transform Developer Guide or their Solutions Architect.
