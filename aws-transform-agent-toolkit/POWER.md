@@ -198,7 +198,9 @@ This power includes an MCP server with search and registration tools:
 
 ### Search Tools
 - **keyword_search(query, top_k)** - Search AWS Transform documentation using keyword matching (recommended)
-- **search_by_source(query, source, top_k)** - Search filtered by source (dev-guide, iam-roles, sdk, api)
+- **search_by_source(query, source, top_k)** - Search filtered by source
+  (`dev-guide`, `sdk`, `agentic-api`, `registry-api`, and the documented
+  HITL-specific sources)
 
 ### Agent Deployment Tools
 - **build_agent_image** - Build AWS Transform agent Docker image for ARM64 platform
@@ -242,13 +244,40 @@ The MCP server provides access to:
 
 ## Verification Guidelines
 
+**FIRST STEP FOR EVERY AWS TRANSFORM QUESTION: call `keyword_search` (or
+`search_by_source`) at least once before you answer — including how-to,
+troubleshooting, "what am I missing", "which role", and "what should it trust"
+questions.** This is mandatory whenever the tools are loaded, even if you already
+know the answer or a steering file obviously contains it. Reading a `steering/*.md`
+file is NOT a substitute for calling search; it is an additional step you may take
+AFTER searching to add depth. Do not answer from a file read alone when the search
+tools are available.
+
 When answering AWS Transform questions:
-1. **Use MCP tools first** - Search indexed docs before answering
+1. **Search first, always** - Call `keyword_search`/`search_by_source` before answering
 2. **Verify CLI commands** - Use `keyword_search("aws cli")` to confirm correct service names
-3. **Verify API names** - Use `search_by_source(query, "api")` to confirm operation names
-4. **Cross-reference** - Check steering files for patterns after MCP search
+3. **Verify API names** - Use `search_by_source(query, "agentic-api")` or
+   `search_by_source(query, "registry-api")`, as appropriate, to confirm operation
+   names
+4. **Cross-reference** - Check steering files for patterns AFTER the MCP search
 
 Never guess: CLI commands, API operation names, service endpoints, or registration steps.
+
+### If search tools are genuinely unavailable (fallback only)
+
+This fallback applies ONLY when `keyword_search` / `search_by_source` are truly not
+loaded in this session (calling them errors or they do not exist). It is NOT a
+shortcut to skip search when the tools ARE available. In that genuine-unavailability
+case, do NOT answer from memory — instead ground every answer by reading the bundled
+`steering/*.md` files, installed SDK, or bundled service models directly, using the
+SAME typed citation tags (`[api:...]`, `[sdk:...]`, `[dev-guide:...]`).
+
+- **Read the FULL relevant section, not just the top of a file.** Steering docs are
+  long; the answer often lives deep in the file. Search within the file for the
+  relevant term, then read the surrounding section.
+- **Inspect authoritative SDK or service-model definitions for exact details.**
+  Locate the installed package, then read the complete class, method, operation, or
+  shape rather than relying on a partial match.
 
 ### Search → Read → Generate (IMPORTANT)
 
@@ -267,19 +296,63 @@ When a search result includes a `file` field (e.g., `"file": "agent_builder_sdk/
 3. **Read** the matched file for full signatures and docstrings
 4. **Generate** code using the complete source — not the truncated preview
 
+**When you cite something found by grepping or reading a file directly, still emit a
+typed tag, never the raw path.** Map an SDK class/function to `[sdk:<Symbol>]`, an API
+operation to `[api:<Operation>]`, and a steering document to
+`[dev-guide:<topic>]`. For example, after reading `agent_runtime_server.py`, cite
+`[sdk:AgentRuntimeServer]`, not the file path.
+
+This avoids hardcoding the Python version in the site-packages path. The `file` field
+tells you which file contains the code; the class or function name from the result
+tells you what to search for; the OS-specific SDK install path tells you where.
+
 ## Grounding Rules (CRITICAL)
 
-**ALWAYS cite your sources.** Every answer must include citation tags from search results.
+**ALWAYS cite your sources.** Every AWS Transform-specific factual claim must include
+typed citation tags from the search results or directly inspected authoritative
+source used to ground it.
+
+**Whenever you name an SDK symbol, API operation, or documentation topic — whether it
+came from a search card, grep, or file read — attach its typed tag
+(`[sdk:Symbol]`, `[api:Operation]`, `[dev-guide:topic]`). A bare file path such as
+`queue_handler.py` is NEVER a citation.** When listing real methods of a class, each
+method named must carry its own `[sdk:...]` tag.
 
 1. **NEVER answer from memory** - Always search first using MCP tools
-2. **If not found, say so** - Respond with "I don't have information about X in the AWS Transform documentation"
-3. **Cite sources in EVERY response** - Include the citation tag from search results:
-   - Format: `[source:name]` e.g., `[sdk:AsyncBaseOrchestrator]`, `[api:RegisterAgent]`, `[dev-guide:doc]`
+2. **If not found, say so** - Respond with "I don't have information about X in the
+   AWS Transform documentation". Every no-results response MUST also end with at
+   least one documentation-discovery next step: check the Developer Guide directly,
+   rephrase the query, or contact your Solutions Architect. This discovery suggestion
+   is required even if you also offer an implementation workaround (for example, a
+   custom `@tool`); the workaround does not replace it.
+3. **Cite AWS Transform-specific claims in EVERY response** using typed citation tags:
+   - Format: `[type:name]`, e.g., `[sdk:AsyncBaseOrchestrator]`,
+     `[api:RegisterAgent]`, `[dev-guide:doc]`
+   - **The tag type is determined by WHAT you cite, never by which tool produced
+     it.** Use the same grammar for search results and directly inspected files:
+     - SDK class/function/method → `[sdk:<Symbol>]` (e.g., `[sdk:AsyncBaseSubagent]`)
+     - API operation → `[api:<Operation>]` (e.g., `[api:RegisterAgent]`)
+     - Steering document / Developer Guide topic → `[dev-guide:<topic>]` (e.g., `[dev-guide:agent-registration]`)
+   - **NEVER cite a raw file path** (e.g.,
+     `[source: steering/agent-registration.md]`). Map the file to its typed tag
+     instead.
+   - **NEVER echo the MCP `source` field as the tag namespace.** Normalize:
+     - `AgentBuilderSDK`, `TransformHITLComponentPythonSDK`, and
+       `TransformHITLComponentJavaSDK` → `[sdk:...]`
+     - `TransformAgenticApiModel` and `AWSTransformAgentRegistryExternalServiceModel` → `[api:...]`
+     - `AWSTransform-Developer-Guide` and `HITL-*` documentation sources → `[dev-guide:...]`
+   - **In tables or lists of methods/APIs, put the typed tag inline in each row.** A
+     "source file" column with a raw filename does NOT count as a citation.
+   - **Worked example:** write
+     `AsyncBaseOrchestrator.process_message_async [sdk:AsyncBaseOrchestrator.process_message_async]`
+     and `AgentRuntimeServer.handle_stop [sdk:AgentRuntimeServer.handle_stop]` — NOT
+     `process_message_async (agent_runtime_server.py)`.
    - Place citations inline or at the end of relevant statements
    - If multiple sources, cite all of them
 4. **Low confidence = search again** - Try different queries before guessing
 5. **Consolidate code snippets** - When search returns code examples:
-   - Verify API operations: `search_by_source("OperationName", "api")`
+   - Verify API operations: `search_by_source("OperationName", "agentic-api")` or
+     `search_by_source("OperationName", "registry-api")`
    - Verify SDK classes: `search_by_source("ClassName", "sdk")`
 6. **Iterate if needed** - If first search results are insufficient:
    - Start broad: `keyword_search("orchestrator")`
@@ -292,11 +365,59 @@ When a search result includes a `file` field (e.g., `"file": "agent_builder_sdk/
 
 Example workflow:
 1. User asks about agent registration
-2. Call `keyword_search("agent registration")` or `search_by_source("RegisterAgent", "api")`
+2. Call `keyword_search("agent registration")` or `search_by_source("RegisterAgent", "registry-api")`
 3. If results found → Answer using ONLY retrieved content + include citation tag from results
-4. If not found → Say "I don't have this in the indexed docs" and suggest checking the Developer Guide or contacting your SA
+4. If not found → Say "I don't have this in the indexed docs" and suggest checking
+   the Developer Guide or contacting your SA
+
+### Scope and Fabrication Boundaries
+
+These topics have operational impact, so fabricated details can cause failures:
+
+- **IAM role names and ARN formats:** Use exact names from the docs
+  (`AgentCoreExecutionRole`, `AWSTransformAgentInvokeRole`). Do not infer custom role
+  name patterns.
+- **API endpoint URLs:** Search for the exact endpoint in the documentation. Do not
+  construct URLs from partial patterns.
+- **CLI service names:** Search the appropriate API source to verify them. Do not
+  guess based on AWS naming patterns.
+- **Undocumented third-party integrations** (Salesforce, Stripe, Slack, or any other
+  external SaaS/API not in the docs): after the honest "I don't have information
+  about X" disclaimer, describe ONLY the AWS Transform-native extension mechanism in
+  the abstract (custom `@tool`, `custom_tools`, connector schema, MCP client) and make
+  the third-party client the user's responsibility. A disclaimer followed by an
+  invented implementation is still fabrication. Do NOT emit service-specific code,
+  concrete method names, pinned library versions, or auth flows, and NEVER attach AWS
+  Transform citation tags to invented third-party code.
+
+**Carve-out — standard AWS-service configuration is NOT fabrication.** The "never
+answer from memory" rule protects AWS Transform-specific facts (role names, ARN
+formats, API operations, endpoint URLs, and naming conventions), which must come from
+search. It does not bar you from acknowledging standard configuration categories of
+an AWS service the user asks about, such as ECR image scanning, KMS encryption,
+lifecycle policies, CloudWatch retention, or S3 versioning. When the docs return
+nothing AWS Transform-specific: (1) state plainly that AWS Transform does not require
+or specify special settings, then (2) briefly name the standard AWS options, clearly
+framed as standard service features rather than AWS Transform requirements. Do not
+attach AWS Transform citation tags to this general-knowledge portion.
+
+### IAM Role Boundary
+
+- `AgentCoreExecutionRole` is the role the Bedrock AgentCore runtime uses for the
+  agent container's AWS API calls.
+- `AWSTransformAgentInvokeRole` is the role AWS Transform assumes to invoke that
+  runtime.
+- For session-duration questions, first identify which credential is expiring. If AWS
+  credentials expire inside the running container, focus on
+  `AgentCoreExecutionRole` and the container's credential refresh behavior;
+  `AWSTransformAgentInvokeRole` is not the source of in-container credentials. State
+  the relevant role clearly instead of suggesting that both roles need changes.
 
 # When to Load Steering Files
+
+**Load a steering file only AFTER calling `keyword_search`/`search_by_source` for the
+question.** Search is the mandatory first step; the files below provide additional
+depth and are never a way to skip search.
 
 - Getting started with AWS Transform or building your first agent → `steering/getting-started.md`
 - Building a new agent from scratch (orchestrator or subagent) → `steering/orchestrator-patterns.md` or `steering/subagent-patterns.md`

@@ -546,7 +546,7 @@ aws bedrock-agentcore-control get-agent-runtime \
 {
   "agentRuntimeId": "abc123def456",
   "agentRuntimeName": "atx_ws_my_agent_02251430",
-  "agentRuntimeArn": "arn:aws:bedrock-agentcore:us-east-1:111122223333:agent-runtime/abc123def456",
+  "agentRuntimeArn": "arn:aws:bedrock-agentcore:us-east-1:111122223333:runtime/abc123def456",
   "status": "READY",
   "containerConfiguration": {
     "containerUri": "111122223333.dkr.ecr.us-east-1.amazonaws.com/aws-transform-agents/my-agent:latest"
@@ -925,7 +925,7 @@ src/
    ============================================================
      code-analysis-agent
        Runtime ID:  abc123def456
-       Runtime ARN: arn:aws:bedrock-agentcore:us-east-1:111122223333:agent-runtime/abc123def456
+       Runtime ARN: arn:aws:bedrock-agentcore:us-east-1:111122223333:runtime/abc123def456
 
    All 3 agents deployed and registered successfully.
    ```
